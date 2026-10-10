@@ -4,6 +4,8 @@
 
 Relay is a macOS app with a browser control page for a phone, console, or another computer. Clients stay on the same network when you switch connections.
 
+[Download Relay for macOS](https://github.com/sadegh-askari/Relay/releases/latest) · [Source and updates](https://github.com/sadegh-askari/Relay)
+
 ![Relay](docs/home.png)
 
 ## Connect your network
