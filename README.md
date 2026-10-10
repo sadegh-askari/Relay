@@ -1,5 +1,7 @@
 # Relay
 
+**Relay is not a VPN.** It only shares your existing VPN connection with other devices. You need your own VPN app and a working configuration.
+
 **Share your Mac’s VPN with clients that cannot run a VPN themselves—or switch them to direct internet with one button.**
 
 Relay is a macOS app for setups where a PlayStation, smart TV, or other client needs VPN access but cannot use a VPN app directly. Clients connect through your router or the Mac’s Wi-Fi hotspot, and you control their connection from Relay or a browser on the same network.
