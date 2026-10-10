@@ -25,7 +25,7 @@ def main():
  shutil.copy2(ROOT/'app-info.json',website/'app-info.json');shutil.copy2(BUILD/'sharectl',website/'sharectl');shutil.copytree(ROOT/'fonts',website/'fonts')
  for name in ('Relay.icns','ICON-LICENSE.txt','PYTHON-LICENSE.txt','PYINSTALLER-LICENSE.txt'):shutil.copy2(ROOT/'assets'/name,resources/name)
  version=json.loads((ROOT/'app-info.json').read_text())['version']
- info={'CFBundleIdentifier':'local.relay.tv','CFBundleName':'Relay','CFBundleDisplayName':'Relay','CFBundleExecutable':'Relay','CFBundlePackageType':'APPL','CFBundleShortVersionString':version,'CFBundleVersion':'8','CFBundleIconFile':'Relay.icns','LSMinimumSystemVersion':'13.0','LSUIElement':True,'NSHighResolutionCapable':True,'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True},'NSHumanReadableCopyright':'Relay · Personal build'}
+ info={'CFBundleIdentifier':'local.relay.tv','CFBundleName':'Relay','CFBundleDisplayName':'Relay','CFBundleExecutable':'Relay','CFBundlePackageType':'APPL','CFBundleShortVersionString':version,'CFBundleVersion':'9','CFBundleIconFile':'Relay.icns','LSMinimumSystemVersion':'13.0','LSUIElement':True,'NSHighResolutionCapable':True,'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True},'NSHumanReadableCopyright':'Relay · Personal build'}
  (contents/'Info.plist').write_bytes(plistlib.dumps(info));(contents/'PkgInfo').write_text('APPL????')
  run('codesign','--force','--deep','--sign','-',APP);run('codesign','--verify','--deep','--strict',APP)
  print(APP)

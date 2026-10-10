@@ -1,8 +1,12 @@
 # Relay
 
-**One button to share your Mac’s VPN or direct internet with any client.**
+**Share your Mac’s VPN with clients that cannot run a VPN themselves—or switch them to direct internet with one button.**
 
-Relay is a macOS app with a browser control page for a phone, console, or another computer. Clients stay on the same network when you switch connections.
+Relay is a macOS app for setups where a PlayStation, smart TV, or other client needs VPN access but cannot use a VPN app directly. Clients connect through your router or the Mac’s Wi-Fi hotspot, and you control their connection from Relay or a browser on the same network.
+
+You can also share one VPN connection across multiple clients without installing a VPN on each one. This can be useful with a VPN account limited to one simultaneous connection, provided your provider permits sharing.
+
+When a VPN is unnecessary or slows streaming and downloads, switch clients to the modem’s direct internet. Direct mode may be faster depending on your connection. Clients stay on the same network, and **Keep Mac VPN unchanged** lets your Mac remain connected to the VPN while clients use direct internet.
 
 [Download Relay for macOS](https://github.com/sadegh-askari/Relay/releases/latest) · [Source and updates](https://github.com/sadegh-askari/Relay)
 
@@ -32,7 +36,7 @@ Connect the modem to the Mac by Ethernet. The Mac shares through a Wi-Fi hotspot
 
 1. Install **Relay.app** in **Applications** and open it. Requires **macOS 13+**.
 2. Create or select a working configuration in your VPN app.
-3. In Relay’s **Settings**, choose the VPN app, connection layout, internet input, and sharing output. Click **Apply network setup** and approve the administrator prompt on the Mac.
+3. In Relay’s **Settings**, choose the VPN connection, connection layout, internet input, and sharing output. Click **Apply network setup** and approve the administrator prompt on the Mac.
 4. Connect clients to the router or hotspot, then open the **Control page** address shown on Home.
 
 **Green** shares VPN internet; **blue** shares direct modem internet. **Keep Mac VPN unchanged** lets clients use direct internet while the Mac stays on VPN. Keep the Mac awake and connected.
@@ -43,9 +47,9 @@ Enable **Launch at login** from Relay’s menu bar. Closing its window keeps it 
 
 ## VPN support
 
-V2Box Pro, V2Box, Shadowrocket, Streisand, WireGuard, AmneziaWG, and SSTP Connect use macOS connection control for a configured VPN service. Settings checks installed apps and usable services when it opens; unavailable apps are disabled. **Other Apps** is manual.
+Settings dynamically detects VPN connections registered in macOS each time it opens. Relay uses macOS to request connect/disconnect and verifies the resulting state and tunnel before switching sharing. A registered connection is not a guarantee of compatibility or working internet. Disabled, invalid, unresponsive and legacy connections that cannot be shared appear unavailable with a reason. **Other Apps** is manual.
 
-**OpenVPN Connect and Happ are experimental:** their app-specific commands can request connect/disconnect, but reliable connection detection and automatic client sharing are not verified and remain disabled. A successful command does not prove a working VPN connection.
+**OpenVPN Connect and Happ:** their app-specific commands can request connect/disconnect, but reliable connection detection and automatic client sharing are not verified and remain disabled. A successful command does not prove a working VPN connection.
 
 **Turn off Connect On Demand / automatic reconnection** in your VPN app before letting Relay control it. Otherwise the VPN may reconnect immediately after a disconnect request. For V2Box Pro, use Settings → Advanced Settings → On Demand Settings. Alternatively, enable Keep Mac VPN unchanged to switch only the clients’ route.
 

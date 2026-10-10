@@ -21,3 +21,5 @@ html[dir=rtl] header a{margin-left:0;margin-right:auto}html[dir=rtl] h1,html[dir
 #setup-form>.fields{grid-template-columns:1fr}.adapter-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}.adapter-fields label{min-width:0}.adapter-fields select{min-width:0;text-overflow:ellipsis}.route-preview{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.route-preview .route-label{white-space:nowrap}.route-preview .route-arrow{direction:ltr;unicode-bidi:isolate;color:#74edbf}@media(max-width:600px){.adapter-fields{gap:12px}.adapter-fields label>span{font-size:13px}.adapter-fields select{font-size:12px;padding-inline-start:8px;padding-inline-end:36px}}
 
 .layout-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}.layout-fields label{min-width:0}.layout-fields input{height:48px;min-width:0}.layout-fields select{min-width:0;text-overflow:ellipsis}@media(max-width:600px){.layout-fields{gap:12px}.layout-fields label>span{font-size:13px}.layout-fields select{font-size:12px}}
+
+#setup-form > .actions{margin-top:24px}@media(max-height:650px) and (min-width:801px){#setup-form > .actions{margin-top:18px}}

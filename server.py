@@ -47,7 +47,7 @@ def vpn_snapshot(selected=None):
         match = re.match(r'^\*\s+\((Connected|Connecting|Disconnected|Disconnecting)\)\s+([A-Fa-f0-9-]{36})\s+VPN \(([^)]+)\)', line)
         if match: rows.append(match.groups())
     selected_row = next((row for row in rows if row[1] == service), None)
-    if code or not selected_row or selected_row[2] not in vpn_apps.SUPPORTED:
+    if code or not selected_row or not vpn_apps.profile(service):
         raise ControlError('The selected VPN profile is unavailable. Open its app once, then refresh Network setup.')
     # The app owns its profile selection. Follow its running connection without
     # ever choosing or stopping a different provider's tunnel.
@@ -100,13 +100,14 @@ def launch_vpn_app(service):
         profile = vpn_apps.profile(service)
     except RuntimeError:
         profile = None
-    if not profile or profile.get('provider') not in vpn_apps.SUPPORTED:
-        raise ControlError('The selected VPN app is unavailable. Refresh detection in Settings.')
+    if not profile or profile.get('experimental'):
+        raise ControlError('The selected VPN connection is unavailable. Refresh detection in Settings.')
     # Launch Services reuses an existing process. -g keeps the current app in front;
     # no new instance, profile selection or credentials are supplied.
     path = vpn_apps.installed_apps(paths=True).get(profile['provider'])
     if not path:
-        raise ControlError('The selected VPN app is unavailable. Refresh detection in Settings.')
+        # A registered system connection can be controlled without an app bundle.
+        return
     code, _ = run(['/usr/bin/open', '-g', '-a', path])
     if code:
         raise ControlError('Relay could not open the selected VPN app. Open it manually on the Mac and try again.')
@@ -178,9 +179,9 @@ class Controller:
         if 'vpnService' in data:
             value = data['vpnService']
             if not isinstance(value, str) or (value != 'other' and not vpn_apps.profile(value)):
-                raise ControlError('The selected VPN app or profile is unavailable. Refresh detection in Settings.')
+                raise ControlError('The selected VPN connection or profile is unavailable. Refresh detection in Settings.')
         if 'keepMacVPN' in data and vpn_apps.is_experimental(data.get('vpnService', self.selected_service())):
-            raise ControlError('Automatic VPN control is unavailable for experimental apps. Use the commands in Settings.')
+            raise ControlError('This connection requires app-specific controls. Use the commands in Settings.')
         if 'keepMacVPN' in data and vpn_apps.is_manual(data.get('vpnService', self.selected_service())):
             raise ControlError('Other Apps must be managed manually on the Mac.')
         if not self.lock.acquire(blocking=False):
@@ -263,7 +264,7 @@ class Controller:
 
     def start(self, action, automatic=False):
         if vpn_apps.is_experimental(self.selected_service()):
-            raise ControlError('Experimental app. Control it in Settings; automatic client sharing is unavailable.')
+            raise ControlError('Use the app controls in Settings. Automatic client sharing is unavailable for this connection.')
         if action not in ('vpn', 'direct', 'reconnect'):
             raise ControlError('Choose VPN or Direct internet.')
         if not self.lock.acquire(blocking=False):
@@ -375,13 +376,13 @@ class Controller:
         if set(data) != {'action'} or data['action'] not in ('open', 'connect', 'disconnect'):
             raise ControlError('Choose a valid experimental VPN command.')
         if not vpn_apps.is_experimental(self.selected_service()):
-            raise ControlError('Select an experimental VPN app first.')
+            raise ControlError('Select a connection with app-specific controls first.')
         if not self.lock.acquire(blocking=False):
             raise ControlError('Wait for the connection change to finish.')
         self.operation = {'busy': True, 'id': secrets.token_hex(8), 'message': 'Sending VPN command…', 'error': False}
         try:
             vendor_control.command(self.selected_service(), data['action'])
-            message = 'Request sent. Check the VPN app on the Mac. Client sharing is unchanged.'
+            message = 'Request sent. Check the VPN connection on the Mac. Client sharing is unchanged.'
             self.operation.update(message=message)
             return {'message': message}
         except vendor_control.VendorError as e:

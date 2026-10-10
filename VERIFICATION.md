@@ -1,4 +1,4 @@
-# Relay 1.2.0 verification
+# Relay verification
 
 - 70 Python regression checks pass, including provider identity, stable connection status, route readiness, rollback, independent Mac VPN mode, setup validation, sessions/CSRF, LAN stylesheet access, saved-language HTML, catalog grouping, mobile assets and On Demand failure messaging. Eight adapter selection scenarios also pass.
 - The exported source builds a universal Apple Silicon/Intel app. Its ad-hoc code signature verifies. The installer image checksum verifies.
@@ -11,3 +11,7 @@ Earlier tests confirmed regular V2Box connection, status and sharing. Shadowrock
 Hotspot setup adopts a hotspot configured once in macOS Internet Sharing. Actual Ethernet-to-Wi-Fi hotspot traffic on this Mac, a physical Intel Mac, earlier macOS versions and a fresh installation on another Mac remain unverified. Local route checks do not prove streaming throughput, VPN server authentication or internet reachability. iPhone home-screen metadata and icon assets were checked; installation on a physical phone was not tested.
 
 This is an ad-hoc signed personal build, not an Apple-notarized distribution.
+
+## Relay 1.3.0: dynamic discovery
+
+72 regression tests pass. VPN selection discovers registered macOS connections without a provider allowlist; read-only status checks gate selection. Invalid, disabled, unresponsive and legacy connections that cannot be shared remain visible with reasons. Registered connections without installed app bundles can use system controls. OpenVPN/Happ app commands remain separate. New-provider connect/disconnect and missing-app behavior are covered with simulated system responses; newly discovered providers were not connected live. Existing matching tunnel and rollback checks remain in place. About is a short English/Persian purpose overview. Settings initial loading and action spacing were checked in the installed app.

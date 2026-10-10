@@ -133,11 +133,18 @@ class TransitionTests(unittest.TestCase):
   with patch.object(tv.vpn_apps,'profile',return_value={'provider':'org.amnezia.awg'}),patch.object(tv.vpn_apps,'installed_apps',return_value={'org.amnezia.awg':'/Applications/AmneziaWG.app'}),patch.object(tv,'run',return_value=(0,'')) as run,patch.object(tv,'wait_vpn') as wait:
    tv.set_vpn('selected',True)
    self.assertEqual(run.call_args_list,[call(['/usr/bin/open','-g','-a','/Applications/AmneziaWG.app']),call(['/usr/sbin/scutil','--nc','start','selected'])]);wait.assert_called_once_with('selected','Connected')
- def test_unapproved_or_missing_app_is_never_launched(self):
-  for profile in [None,{'provider':'unapproved.app'}]:
+ def test_missing_or_command_only_connection_never_sends_system_commands(self):
+  for profile in [None,{'provider':'vendor.app','experimental':True}]:
    with patch.object(tv.vpn_apps,'profile',return_value=profile),patch.object(tv,'run') as run:
     with self.assertRaises(tv.ControlError):tv.set_vpn('selected',True)
     run.assert_not_called()
+ def test_unlisted_provider_uses_generic_system_control(self):
+  with patch.object(tv.vpn_apps,'profile',return_value={'provider':'new.vendor'}),patch.object(tv.vpn_apps,'installed_apps',return_value={'new.vendor':'/Applications/New VPN.app'}),patch.object(tv,'run',return_value=(0,'')) as run,patch.object(tv,'wait_vpn'):
+   tv.set_vpn('selected',False)
+   self.assertEqual(run.call_args_list,[call(['/usr/bin/open','-g','-a','/Applications/New VPN.app']),call(['/usr/sbin/scutil','--nc','stop','selected'])])
+ def test_registered_connection_without_app_can_be_started(self):
+  with patch.object(tv.vpn_apps,'profile',return_value={'provider':'system.vendor'}),patch.object(tv.vpn_apps,'installed_apps',return_value={}),patch.object(tv,'run',return_value=(0,'')) as run,patch.object(tv,'wait_vpn'):
+   tv.set_vpn('selected',True);run.assert_called_once_with(['/usr/sbin/scutil','--nc','start','selected'])
  def test_app_launch_failure_never_sends_connect_command(self):
   with patch.object(tv.vpn_apps,'profile',return_value={'provider':'org.amnezia.awg'}),patch.object(tv.vpn_apps,'installed_apps',return_value={'org.amnezia.awg':'/Applications/AmneziaWG.app'}),patch.object(tv,'run',return_value=(1,'')) as run:
    with self.assertRaises(tv.ControlError):tv.set_vpn('selected',True)
@@ -161,7 +168,7 @@ class TransitionTests(unittest.TestCase):
  def test_active_profile_is_resolved_within_selected_app_only(self):
   first='E8D79118-786A-4730-B0B0-D8C8EDA8F7CD';second='8D8DCB6A-6170-47AF-AA22-1FF8554C92E0';other='FDDFAF59-0399-4ADA-9F8B-08BC8E0C24FE'
   listing=f'* (Disconnected) {first} VPN (org.amnezia.awg) "First"\n* (Connected) {second} VPN (org.amnezia.awg) "Second"\n* (Connected) {other} VPN (com.liguangming.Shadowrocket) "Other"'
-  with patch.object(tv,'configuration',return_value={'vpnService':first}),patch.object(tv,'run',side_effect=[(0,listing),(0,'Connected\nPRIVATE')]) as run:
+  with patch.object(tv,'configuration',return_value={'vpnService':first}),patch.object(tv.vpn_apps,'profile',return_value={'provider':'org.amnezia.awg'}),patch.object(tv,'run',side_effect=[(0,listing),(0,'Connected\nPRIVATE')]) as run:
    self.assertEqual(tv.vpn_snapshot(first),(second,'Connected'));self.assertEqual(run.call_args.args[0][-1],second)
  def test_disabled_profile_cannot_be_controlled(self):
   uid='E8D79118-786A-4730-B0B0-D8C8EDA8F7CD'
@@ -210,31 +217,33 @@ class SetupTests(unittest.TestCase):
   setup.topology.cache_clear()
 
 class DiscoveryTests(unittest.TestCase):
- def test_missing_apps_invalid_profiles_and_ppp_are_excluded(self):
+ def test_registered_connections_are_dynamic_and_unavailable_entries_have_reasons(self):
   import subprocess
   v=tv.vpn_apps;v._cache=None
   uid='9D11813B-B884-420F-892B-5E06B6D088D3'
-  listing='* (Disconnected) '+uid+' VPN (hossin.asaadi.V2Box) "Test profile" [VPN:test.app]\n'
-  listing+='* (Disconnected) 97961466-3EE7-4EFC-A2B7-60FE1E197774 VPN (missing.app) "Absent"\n'
-  listing+='  (Invalid) 2DDBC57F-6FD4-4260-AD29-EFDE9F795F0C VPN (hossin.asaadi.V2Box) "Invalid"\n'
+  listing='* (Disconnected) '+uid+' VPN (new.vendor) "New tunnel"\n'
+  listing+='* (Disconnected) 97961466-3EE7-4EFC-A2B7-60FE1E197774 VPN (missing.app) "System tunnel"\n'
+  listing+='  (Invalid) 2DDBC57F-6FD4-4260-AD29-EFDE9F795F0C VPN (invalid.app) "Invalid"\n'
   listing+='* (Disconnected) 00DD3925-4EA3-4E58-A5F7-08199B064FF8 PPP --> L2TP "Legacy"\n'
   def command(args,**kwargs):return subprocess.CompletedProcess(args,0,listing if args[-1]=='list' else 'Disconnected\nSECRET-CONFIG', '')
-  with patch.object(v,'installed_apps',return_value={'hossin.asaadi.V2Box':'V2Box'}),patch.object(v.subprocess,'run',side_effect=command):
-   result=v.discover(True)
-  self.assertEqual(len(result),1);self.assertEqual(result[0]['profiles'],[{'id':uid,'name':'Test profile','state':'Disconnected'}]);self.assertNotIn('SECRET',json.dumps(result))
-  v._cache=None
- def test_unapproved_installed_app_is_excluded(self):
+  with patch.object(v,'installed_apps',return_value={'new.vendor':'New VPN'}),patch.object(v.subprocess,'run',side_effect=command):
+   result=v.discover(True);self.assertEqual(v.profile(uid)['provider'],'new.vendor')
+   self.assertIsNone(v.profile('2DDBC57F-6FD4-4260-AD29-EFDE9F795F0C'));self.assertIsNone(v.profile('00DD3925-4EA3-4E58-A5F7-08199B064FF8'))
+  self.assertEqual(len(result),4);self.assertEqual({a['name'] for a in result if a['available']},{'New VPN','System tunnel'});self.assertTrue(all(a.get('unavailableReason') for a in result if not a['available']));self.assertNotIn('SECRET',json.dumps(result));v._cache=None
+ def test_unresponsive_control_connection_remains_visible_but_unavailable(self):
   import subprocess
   v=tv.vpn_apps;v._cache=None
-  listing='* (Disconnected) 9D11813B-B884-420F-892B-5E06B6D088D3 VPN (com.speedify.mac) "Speedify"\n'
-  with patch.object(v,'installed_apps',return_value={'com.speedify.mac':'Speedify'}),patch.object(v.subprocess,'run',return_value=subprocess.CompletedProcess([],0,listing,'')):
-   self.assertEqual(v.discover(True),[])
+  listing='* (Disconnected) 9D11813B-B884-420F-892B-5E06B6D088D3 VPN (new.vendor) "Test"\n'
+  with patch.object(v,'installed_apps',return_value={}),patch.object(v.subprocess,'run',side_effect=[subprocess.CompletedProcess([],0,listing,''),subprocess.CompletedProcess([],1,'Unknown','')]):
+   apps=v.discover(True);self.assertEqual(len(apps),1);self.assertFalse(apps[0]['available']);self.assertIsNone(v.profile('9D11813B-B884-420F-892B-5E06B6D088D3'))
   v._cache=None
- def test_unresponsive_control_profile_is_excluded(self):
+ def test_invalid_and_valid_profiles_from_one_provider_keep_valid_connection_selectable(self):
   import subprocess
   v=tv.vpn_apps;v._cache=None
-  listing='* (Disconnected) 9D11813B-B884-420F-892B-5E06B6D088D3 VPN (hossin.asaadi.V2Box) "Test"\n'
-  with patch.object(v,'installed_apps',return_value={'hossin.asaadi.V2Box':'V2Box'}),patch.object(v.subprocess,'run',side_effect=[subprocess.CompletedProcess([],0,listing,''),subprocess.CompletedProcess([],1,'Unknown','')]):self.assertEqual(v.discover(True),[])
+  first='9D11813B-B884-420F-892B-5E06B6D088D3';invalid='97961466-3EE7-4EFC-A2B7-60FE1E197774'
+  listing=f'* (Disconnected) {first} VPN (new.vendor) "Good"\n  (Invalid) {invalid} VPN (new.vendor) "Bad"'
+  with patch.object(v,'installed_apps',return_value={}),patch.object(v.subprocess,'run',side_effect=lambda args,**kw: subprocess.CompletedProcess(args,0,listing if args[-1]=='list' else 'Disconnected','')):
+   apps=v.discover(True);self.assertTrue(apps[0]['available']);self.assertIsNotNone(v.profile(first));self.assertIsNone(v.profile(invalid))
   v._cache=None
  def test_wrapped_ios_app_and_malformed_plist(self):
   import plistlib
@@ -351,9 +360,9 @@ class OnDemandFailureTests(unittest.TestCase):
    with self.assertRaisesRegex(tv.ControlError,'Connect On Demand'):tv.wait_vpn('selected','Disconnected')
 
 class CatalogTests(unittest.TestCase):
- def test_catalog_fresh_installed_and_uninstalled_groups(self):
-  configured={'id':'dev.hexasoftware.V2Box','name':'V2Box Pro','profiles':[{'id':'test','state':'Disconnected'}]}
-  with patch.object(tv.vpn_apps,'discover',return_value=[configured]) as discovery,patch.object(tv.vpn_apps,'installed_apps',return_value={'dev.hexasoftware.V2Box':'V2Box Pro','com.wireguard.macos':'WireGuard'}):
-   rows=tv.vpn_apps.catalog();discovery.assert_called_once_with(refresh=True);self.assertEqual([r['name'] for r in rows if r['installed']],['V2Box Pro','WireGuard']);wire=next(r for r in rows if r['name']=='WireGuard');self.assertFalse(wire['available']);self.assertEqual(wire['profiles'],[]);self.assertTrue(next(r for r in rows if r['name']=='V2Box Pro')['available']);self.assertFalse(any(r['name']=='Cisco Secure Client' for r in rows))
+ def test_catalog_refreshes_and_does_not_add_unregistered_or_uninstalled_providers(self):
+  configured={'id':'new.vendor','name':'New VPN','available':True,'profiles':[{'id':'test','state':'Disconnected'}]}
+  with patch.object(tv.vpn_apps,'discover',return_value=[configured]) as discovery:
+   self.assertEqual(tv.vpn_apps.catalog(),[configured]);discovery.assert_called_once_with(refresh=True)
 
 if __name__=='__main__':unittest.main(verbosity=2)
